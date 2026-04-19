@@ -414,18 +414,53 @@ local function createMurderESP(player)
     table.insert(espObjects, BillboardGui)
 end
 
--- Find Murder Funktion
+-- Find Murder Funktion (korrigiert)
 local function findMurder()
+    murder = nil
+    
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local Character = player.Character
-            if Character and Character:FindFirstChild("Tool") then
-                local Tool = Character:FindFirstChild("Tool")
-                if Tool and Tool.Name == "Knife" then
+        if player ~= LocalPlayer and player.Character then
+            -- Überprüfe auf verschiedene Möglichkeiten, wie das Messer im Spiel heißen könnte
+            local knifeFound = false
+            
+            -- Prüfe auf Tool namens "Knife"
+            for _, item in ipairs(player.Character:GetChildren()) do
+                if item:IsA("Tool") and (item.Name == "Knife" or item.Name == "Machete" or string.find(string.lower(item.Name), "knife") or string.find(string.lower(item.Name), "murder")) then
                     murder = player
-                    createMurderESP(player)
-                    return player
+                    knifeFound = true
+                    break
                 end
+            end
+            
+            -- Alternative Prüfung: Überprüfe auf Backpack mit Messer
+            if not knifeFound then
+                for _, item in ipairs(player.Backpack:GetChildren()) do
+                    if item:IsA("Tool") and (item.Name == "Knife" or item.Name == "Machete" or string.find(string.lower(item.Name), "knife") or string.find(string.lower(item.Name), "murder")) then
+                        murder = player
+                        knifeFound = true
+                        break
+                    end
+                end
+            end
+            
+            -- Prüfe auf spezielle Charakter-Eigenschaften, die auf den Mörder hindeuten könnten
+            if not knifeFound then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    -- In vielen Murder Mystery Spielen hat der Mörder eine besondere BodyColor oder ein anderes Merkmal
+                    local bodyColors = player.Character:FindFirstChild("Body Colors")
+                    if bodyColors then
+                        -- Manchmal hat der Mörder eine bestimmte Kopf- oder Torso-Farbe
+                        if bodyColors.HeadColor == Color3.new(0.905882, 0.905882, 0.905882) and bodyColors.TorsoColor == Color3.new(0.905882, 0.905882, 0.905882) then
+                            murder = player
+                        end
+                    end
+                end
+            end
+            
+            if murder then
+                createMurderESP(murder)
+                return player
             end
         end
     end
@@ -641,7 +676,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Initialisierung
+-- Verbesserte Initialisierung
 local function initialize()
     -- Setze initialen Slider-Wert
     local fill = Instance.new("Frame")
@@ -652,23 +687,59 @@ local function initialize()
     fill.Position = UDim2.new(0, 0, 0, 0)
     fill.Size = UDim2.new(0.018, 0, 1, 0)  -- 0.1 / 50.0 = 0.018
     
-    -- Überprüfe periodisch nach dem Mörder
-    local function checkForMurder()
-        if findMurderEnabled then
-            local newMurder = findMurder()
-            if newMurder and newMurder ~= murder then
-                murder = newMurder
-                -- Entferne alte Murder ESP
-                for _, obj in ipairs(espObjects) do
-                    if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
-                        obj:Destroy()
-                    end
+    -- Überprüfe periodisch nach dem Mörder (häufiger und zuverlässiger)
+    spawn(function()
+        while true do
+            wait(0.5)  -- Alle 0.5 Sekunden überprüfen statt alle 2 Sekunden
+            checkForMurder()
+        end
+    end)
+    
+    -- Zusätzliche Überprüfung, wenn ein Spieler stirbt oder respawnt
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function(character)
+            if findMurderEnabled then
+                wait(1)  -- Warte kurz, damit das Character geladen ist
+                checkForMurder()
+            end
+        end)
+    end)
+    
+    -- Überprüfe auch, wenn sich etwas im Workspace ändert
+    workspace.ChildAdded:Connect(function(child)
+        if findMurderEnabled and child:IsA("Tool") then
+            wait(0.2)
+            checkForMurder()
+        end
+    end)
+end
+    
+  -- Verbesserte Überprüfungsfunktion
+local function checkForMurder()
+    if findMurderEnabled then
+        local newMurder = findMurder()
+        if newMurder and newMurder ~= murder then
+            murder = newMurder
+            -- Entferne alte Murder ESP
+            for _, obj in ipairs(espObjects) do
+                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
+                    obj:Destroy()
                 end
-                -- Erstelle neue Murder ESP
-                createMurderESP(murder)
+            end
+            -- Erstelle neue Murder ESP
+            createMurderESP(murder)
+        elseif newMurder == nil and murder ~= nil then
+            -- Mörder wurde nicht gefunden, aber wir hatten vorher einen
+            murder = nil
+            -- Entferne alte Murder ESP
+            for _, obj in ipairs(espObjects) do
+                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
+                    obj:Destroy()
+                end
             end
         end
     end
+end
     
     -- Überprüfe alle 2 Sekunden nach dem Mörder
     spawn(function()
