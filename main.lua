@@ -676,6 +676,44 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+
+    
+-- Verbesserte Überprüfungsfunktion
+local function checkForMurder()
+    if findMurderEnabled then
+        local newMurder = findMurder()
+        if newMurder and newMurder ~= murder then
+            murder = newMurder
+            -- Entferne alte Murder ESP
+            for _, obj in ipairs(espObjects) do
+                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
+                    obj:Destroy()
+                end
+            end
+            -- Erstelle neue Murder ESP
+            createMurderESP(murder)
+        elseif newMurder == nil and murder ~= nil then
+            -- Mörder wurde nicht gefunden, aber wir hatten vorher einen
+            murder = nil
+            -- Entferne alte Murder ESP
+            for _, obj in ipairs(espObjects) do
+                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
+                    obj:Destroy()
+                end
+            end
+        end
+    end
+end
+    
+    -- Überprüfe alle 2 Sekunden nach dem Mörder
+    spawn(function()
+        while true do
+            wait(2)
+            checkForMurder()
+        end
+    end)
+end
+
 -- Verbesserte Initialisierung
 local function initialize()
     -- Setze initialen Slider-Wert
@@ -709,42 +747,6 @@ local function initialize()
     workspace.ChildAdded:Connect(function(child)
         if findMurderEnabled and child:IsA("Tool") then
             wait(0.2)
-            checkForMurder()
-        end
-    end)
-end
-    
-  -- Verbesserte Überprüfungsfunktion
-local function checkForMurder()
-    if findMurderEnabled then
-        local newMurder = findMurder()
-        if newMurder and newMurder ~= murder then
-            murder = newMurder
-            -- Entferne alte Murder ESP
-            for _, obj in ipairs(espObjects) do
-                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
-                    obj:Destroy()
-                end
-            end
-            -- Erstelle neue Murder ESP
-            createMurderESP(murder)
-        elseif newMurder == nil and murder ~= nil then
-            -- Mörder wurde nicht gefunden, aber wir hatten vorher einen
-            murder = nil
-            -- Entferne alte Murder ESP
-            for _, obj in ipairs(espObjects) do
-                if obj.Name == "MurderESP" or obj.Name == "MurderNameESP" then
-                    obj:Destroy()
-                end
-            end
-        end
-    end
-end
-    
-    -- Überprüfe alle 2 Sekunden nach dem Mörder
-    spawn(function()
-        while true do
-            wait(2)
             checkForMurder()
         end
     end)
