@@ -167,6 +167,18 @@ SpeedToggle.Text = "Speed: OFF"
 SpeedToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedToggle.TextSize = 14
 
+local NoClipToggle = Instance.new("TextButton")
+NoClipToggle.Name = "NoClipToggle"
+NoClipToggle.Parent = MainContent
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+NoClipToggle.BorderSizePixel = 0
+NoClipToggle.Position = UDim2.new(0, 20, 0, 70)
+NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
+NoClipToggle.Font = Enum.Font.Gotham
+NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoClipToggle.TextSize = 14
+
 local FindMurderToggle = Instance.new("TextButton")
 FindMurderToggle.Name = "FindMurderToggle"
 FindMurderToggle.Parent = MainContent
@@ -316,19 +328,45 @@ local function speed()
     end)
 end
 
--- Item ESP Funktion
+-- NoClip Funktion
+local function noclip()
+    local Character = LocalPlayer.Character
+    if not Character or not Character:FindFirstChild("Humanoid") then return end
+    
+    local Humanoid = Character.Humanoid
+    
+    local connection
+    connection = RunService.Stepped:Connect(function()
+        if not speedEnabled then  -- Wir verwenden die gleiche Variable wie für Speed
+            Humanoid:ChangeState("Standing")
+            connection:Disconnect()
+            return
+        end
+        
+        Humanoid:ChangeState("StrafingNoPhysics")
+    end)
+end
+
+-- Item ESP Funktion (verbessert)
 local function createItemESP(item)
+    -- Entferne alte ESP, falls vorhanden
+    local oldESP = item:FindFirstChild("ItemESP")
+    if oldESP then
+        oldESP:Destroy()
+    end
+    
     local BillboardGui = Instance.new("BillboardGui")
     BillboardGui.Name = "ItemESP"
     BillboardGui.Parent = item
     BillboardGui.Adornee = item
     BillboardGui.Size = UDim2.new(0, 100, 0, 50)
     BillboardGui.StudsOffset = Vector3.new(0, 2, 0)
+    BillboardGui.AlwaysOnTop = true
     
     local Frame = Instance.new("Frame")
     Frame.Parent = BillboardGui
     Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-    Frame.BackgroundTransparency = 0.5
+    Frame.BackgroundTransparency = 0.3
     Frame.BorderSizePixel = 0
     Frame.Size = UDim2.new(1, 0, 1, 0)
     
@@ -564,28 +602,72 @@ SpeedToggle.MouseButton1Click:Connect(function()
     end
 end)
 
+NoClipToggle.MouseButton1Click:Connect(function()
+    speedEnabled = not speedEnabled  -- Wir verwenden die gleiche Variable wie für Speed
+    NoClipToggle.Text = "NoClip: " .. (speedEnabled and "ON" or "OFF")
+    
+    if speedEnabled then
+        noclip()
+    end
+end)
+
 ItemEspToggle.MouseButton1Click:Connect(function()
     itemEspEnabled = not itemEspEnabled
     ItemEspToggle.Text = "Item ESP: " .. (itemEspEnabled and "ON" or "OFF")
     
     if itemEspEnabled then
+        -- Überprüfe alle Items im Workspace
         for _, item in ipairs(workspace:GetDescendants()) do
             if item:IsA("Tool") and item.Parent ~= LocalPlayer.Character then
                 createItemESP(item)
             end
         end
         
-        workspace.ChildAdded:Connect(function(child)
-            if itemEspEnabled and child:IsA("Tool") and child.Parent ~= LocalPlayer.Character then
-                createItemESP(child)
+        -- Überprüfe auch auf Modelle, die Waffen enthalten könnten
+        for _, item in ipairs(workspace:GetDescendants()) do
+            if item:IsA("Model") and item.Parent ~= LocalPlayer.Character then
+                for _, child in ipairs(item:GetChildren()) do
+                    if child:IsA("Tool") then
+                        createItemESP(child)
+                    end
+                end
+            end
+        end
+        
+        -- Event für neue Items
+        local itemAddedConnection
+        itemAddedConnection = workspace.ChildAdded:Connect(function(child)
+            if itemEspEnabled then
+                -- Direkte Tools
+                if child:IsA("Tool") and child.Parent ~= LocalPlayer.Character then
+                    wait(0.1)  -- Kurze Verzögerung, damit das Item vollständig geladen ist
+                    createItemESP(child)
+                -- Modelle, die Tools enthalten könnten
+                elseif child:IsA("Model") then
+                    wait(0.1)
+                    for _, subChild in ipairs(child:GetChildren()) do
+                        if subChild:IsA("Tool") then
+                            createItemESP(subChild)
+                        end
+                    end
+                end
             end
         end)
+        
+        -- Speichere die Verbindung, um sie später zu trennen
+        table.insert(espObjects, {Connection = itemAddedConnection})
     else
+        -- Entferne alle Item ESPs
         for _, obj in ipairs(espObjects) do
-            if obj.Name == "ItemESP" then
+            if type(obj) == "table" and obj.Connection then
+                obj.Connection:Disconnect()
+            elseif obj.Name == "ItemESP" then
                 obj:Destroy()
             end
         end
+        
+        -- Bereinige die espObjects Tabelle
+        espObjects = {}
     end
 end)
 
