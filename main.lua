@@ -11,7 +11,15 @@ local Mouse = LocalPlayer:GetMouse()
 -- UI Erstellung
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MurderMysteryHack"
-ScreenGui.Parent = game:GetService("CoreGui")
+
+-- Versuche, es zu CoreGui hinzuzufügen, falls das fehlschlägt, versuche es mit PlayerGui
+local success, err = pcall(function()
+    ScreenGui.Parent = game:GetService("CoreGui")
+end)
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local MainFrame = Instance.new("Frame")
@@ -705,14 +713,15 @@ local function checkForMurder()
     end
 end
     
-    -- Überprüfe alle 2 Sekunden nach dem Mörder
-    spawn(function()
-        while true do
-            wait(2)
-            checkForMurder()
-        end
-    end)
-end
+  -- Überprüfe alle 2 Sekunden nach dem Mörder
+spawn(function()
+    while true do
+        wait(2)
+        checkForMurder()
+    end
+end)
+
+
 
 -- Verbesserte Initialisierung
 local function initialize()
@@ -750,6 +759,7 @@ local function initialize()
             checkForMurder()
         end
     end)
+end
 end
 
 initialize()
