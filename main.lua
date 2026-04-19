@@ -760,7 +760,6 @@ local function initialize()
         end
     end)
 end
-end
 
 initialize()
 
