@@ -240,7 +240,7 @@ local flySpeed = 1.0
 local murder = nil
 local espObjects = {}
 
--- Fly Funktion
+-- Fly Funktion (korrigiert)
 local function fly()
     local Character = LocalPlayer.Character
     if not Character or not Character:FindFirstChild("Humanoid") or not Character:FindFirstChild("HumanoidRootPart") then return end
@@ -261,11 +261,13 @@ local function fly()
         if not flyEnabled then
             bv:Destroy()
             bg:Destroy()
+            Humanoid.PlatformStand = false  -- Wichtig: PlatformStand zurücksetzen
             connection:Disconnect()
             return
         end
         
         Humanoid.PlatformStand = true
+        -- Korrigierte Steuerung (vorwärts ist jetzt wirklich vorwärts)
         local moveDir = Vector3.new(
             (UserInputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.A) and 1 or 0),
             (UserInputService:IsKeyDown(Enum.KeyCode.Space) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and 1 or 0),
@@ -276,8 +278,13 @@ local function fly()
             moveDir = moveDir.Unit
         end
         
-        bv.Velocity = moveDir * flySpeed * 20
-        bg.CFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + workspace.CurrentCamera.CFrame.LookVector)
+        -- Bewegung relativ zur Kamerarichtung
+        local cameraDirection = workspace.CurrentCamera.CFrame.LookVector
+        local rightDirection = workspace.CurrentCamera.CFrame.RightVector
+        
+        local relativeMove = (rightDirection * moveDir.X + cameraDirection * (-moveDir.Z) + Vector3.new(0, moveDir.Y, 0))
+        bv.Velocity = relativeMove * flySpeed * 20
+        bg.CFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + cameraDirection)
     end)
 end
 
