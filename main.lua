@@ -179,6 +179,18 @@ NoClipToggle.Text = "NoClip: OFF"
 NoClipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 NoClipToggle.TextSize = 14
 
+local PlayerTrackerToggle = Instance.new("TextButton")
+PlayerTrackerToggle.Name = "PlayerTrackerToggle"
+PlayerTrackerToggle.Parent = MainContent
+PlayerTrackerToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+PlayerTrackerToggle.BorderSizePixel = 0
+PlayerTrackerToggle.Position = UDim2.new(0, 240, 0, 70)  -- Position neben NoClip
+PlayerTrackerToggle.Size = UDim2.new(0, 100, 0, 30)
+PlayerTrackerToggle.Font = Enum.Font.Gotham
+PlayerTrackerToggle.Text = "Tracker: OFF"
+PlayerTrackerToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerTrackerToggle.TextSize = 14
+
 local FindMurderToggle = Instance.new("TextButton")
 FindMurderToggle.Name = "FindMurderToggle"
 FindMurderToggle.Parent = MainContent
@@ -269,6 +281,11 @@ local findMurderEnabled = false
 local flySpeed = 1.0
 local murder = nil
 local espObjects = {}
+-- Player Tracker Variablen
+local playerTrackerEnabled = false
+local trackedPlayer = nil
+local trackerConnection = nil
+local trackerGui = nil
 
 -- Fly Funktion (korrigiert)
 local function fly()
@@ -570,6 +587,153 @@ local function aimbot()
     end
 end
 
+-- Player Tracker Funktion
+local function trackPlayer(player)
+    if trackedPlayer then
+        -- Beende das Tracking des vorherigen Spielers
+        if trackerConnection then
+            trackerConnection:Disconnect()
+            trackerConnection = nil
+        end
+        trackedPlayer = nil
+    end
+    
+    if not player then return end
+    
+    trackedPlayer = player
+    
+    trackerConnection = RunService.Heartbeat:Connect(function()
+        if not playerTrackerEnabled or not trackedPlayer or not trackedPlayer.Character or not trackedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            -- Beende das Tracking, wenn der Spieler nicht mehr existiert oder der Tracker deaktiviert ist
+            if trackerConnection then
+                trackerConnection:Disconnect()
+                trackerConnection = nil
+            end
+            trackedPlayer = nil
+            return
+        end
+        
+        local Character = LocalPlayer.Character
+        if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
+        
+        local targetPosition = trackedPlayer.Character.HumanoidRootPart.Position
+        -- Teleportiere den Spieler nahe an den verfolgten Spieler heran
+        Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 5, 3), targetPosition)
+    end)
+end
+
+-- Erstelle die Player Tracker UI
+local function createTrackerUI()
+    if trackerGui then
+        trackerGui:Destroy()
+    end
+    
+    trackerGui = Instance.new("ScreenGui")
+    trackerGui.Name = "PlayerTrackerGui"
+    trackerGui.Parent = ScreenGui.Parent  -- Verwende denselben Parent wie die Haupt-UI
+    trackerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local TrackerFrame = Instance.new("Frame")
+    TrackerFrame.Name = "TrackerFrame"
+    TrackerFrame.Parent = trackerGui
+    TrackerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    TrackerFrame.BorderSizePixel = 0
+    TrackerFrame.Position = UDim2.new(0, 520, 0.5, -150)  -- Position neben der Haupt-UI
+    TrackerFrame.Size = UDim2.new(0, 250, 0, 300)
+    TrackerFrame.Active = true
+    TrackerFrame.Draggable = true
+    
+    local TrackerTitle = Instance.new("TextLabel")
+    TrackerTitle.Name = "TrackerTitle"
+    TrackerTitle.Parent = TrackerFrame
+    TrackerTitle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    TrackerTitle.BorderSizePixel = 0
+    TrackerTitle.Position = UDim2.new(0, 0, 0, 0)
+    TrackerTitle.Size = UDim2.new(0, 250, 0, 30)
+    TrackerTitle.Font = Enum.Font.GothamBold
+    TrackerTitle.Text = "Player Tracker"
+    TrackerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TrackerTitle.TextSize = 18
+    
+    local CloseTrackerButton = Instance.new("TextButton")
+    CloseTrackerButton.Name = "CloseTrackerButton"
+    CloseTrackerButton.Parent = TrackerFrame
+    CloseTrackerButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    CloseTrackerButton.BorderSizePixel = 0
+    CloseTrackerButton.Position = UDim2.new(0, 220, 0, 5)
+    CloseTrackerButton.Size = UDim2.new(0, 25, 0, 20)
+    CloseTrackerButton.Font = Enum.Font.SourceSans
+    CloseTrackerButton.Text = "X"
+    CloseTrackerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseTrackerButton.TextSize = 14
+    
+    local PlayerListFrame = Instance.new("ScrollingFrame")
+    PlayerListFrame.Name = "PlayerListFrame"
+    PlayerListFrame.Parent = TrackerFrame
+    PlayerListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    PlayerListFrame.BorderSizePixel = 0
+    PlayerListFrame.Position = UDim2.new(0, 0, 0, 30)
+    PlayerListFrame.Size = UDim2.new(0, 250, 0, 270)
+    PlayerListFrame.ScrollBarThickness = 5
+    
+    -- Fülle die Spielerliste
+    local function updatePlayerList()
+        -- Lösche alte Einträge
+        for _, child in ipairs(PlayerListFrame:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
+            end
+        end
+        
+        -- Füge alle Spieler hinzu
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local PlayerButton = Instance.new("TextButton")
+                PlayerButton.Name = "PlayerButton"
+                PlayerButton.Parent = PlayerListFrame
+                PlayerButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                PlayerButton.BorderSizePixel = 0
+                PlayerButton.Position = UDim2.new(0, 10, 0, #PlayerListFrame:GetChildren() * 35)
+                PlayerButton.Size = UDim2.new(0, 230, 0, 30)
+                PlayerButton.Font = Enum.Font.Gotham
+                PlayerButton.Text = player.Name
+                PlayerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                PlayerButton.TextSize = 14
+                
+                -- Markiere den verfolgten Spieler
+                if trackedPlayer == player then
+                    PlayerButton.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+                end
+                
+                PlayerButton.MouseButton1Click:Connect(function()
+                    trackPlayer(player)
+                    updatePlayerList()  -- Aktualisiere die Liste, um die Markierung zu aktualisieren
+                end)
+            end
+        end
+        
+        -- Setze die CanvasSize basierend auf der Anzahl der Spieler
+        PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, #PlayerListFrame:GetChildren() * 35)
+    end
+    
+    -- Event Handler
+    CloseTrackerButton.MouseButton1Click:Connect(function()
+        playerTrackerEnabled = false
+        trackPlayer(nil)  -- Beende das Tracking
+        trackerGui:Destroy()
+        trackerGui = nil
+    end)
+    
+    -- Aktualisiere die Spielerliste, wenn ein Spieler hinzugefügt oder entfernt wird
+    Players.PlayerAdded:Connect(updatePlayerList)
+    Players.PlayerRemoving:Connect(updatePlayerList)
+    
+    -- Initiale Aktualisierung
+    updatePlayerList()
+    
+    return trackerGui
+end
+
 -- Event Handler
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
@@ -629,6 +793,21 @@ NoClipToggle.MouseButton1Click:Connect(function()
     
     if noclipEnabled then
         noclip()
+    end
+end)
+
+PlayerTrackerToggle.MouseButton1Click:Connect(function()
+    playerTrackerEnabled = not playerTrackerEnabled
+    PlayerTrackerToggle.Text = "Tracker: " .. (playerTrackerEnabled and "ON" or "OFF")
+    
+    if playerTrackerEnabled then
+        createTrackerUI()
+    else
+        trackPlayer(nil)  -- Beende das Tracking
+        if trackerGui then
+            trackerGui:Destroy()
+            trackerGui = nil
+        end
     end
 end)
 
