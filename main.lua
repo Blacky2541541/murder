@@ -368,9 +368,6 @@ local function createPlayerESP(player)
     table.insert(espObjects, BillboardGui)
 end
 
-Entschuldigung für das Abbrechen. Hier ist das vollständige Skript:
-
-```lua
 -- Murder ESP Funktion
 local function createMurderESP(player)
     local Character = player.Character
