@@ -172,7 +172,7 @@ NoClipToggle.Name = "NoClipToggle"
 NoClipToggle.Parent = MainContent
 NoClipToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 NoClipToggle.BorderSizePixel = 0
-NoClipToggle.Position = UDim2.new(0, 20, 0, 70)
+NoClipToggle.Position = UDim2.new(0, 130, 0, 70)  -- Geänderte Position
 NoClipToggle.Size = UDim2.new(0, 100, 0, 30)
 NoClipToggle.Font = Enum.Font.Gotham
 NoClipToggle.Text = "NoClip: OFF"
@@ -184,7 +184,7 @@ FindMurderToggle.Name = "FindMurderToggle"
 FindMurderToggle.Parent = MainContent
 FindMurderToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 FindMurderToggle.BorderSizePixel = 0
-FindMurderToggle.Position = UDim2.new(0, 20, 0, 120)
+FindMurderToggle.Position = UDim2.new(0, 20, 0, 120)  -- Unverändert, aber zur Klarheit
 FindMurderToggle.Size = UDim2.new(0, 150, 0, 30)
 FindMurderToggle.Font = Enum.Font.Gotham
 FindMurderToggle.Text = "Find Murder: OFF"
@@ -252,6 +252,16 @@ AimbotToggle.TextSize = 14
 -- Variablen
 local flyEnabled = false
 local speedEnabled = false
+local itemEspEnabled = false
+local playerEspEnabled = false
+local aimbotEnabled = false
+local findMurderEnabled = false
+local flySpeed = 1.0
+local murder = nil
+local espObjects = {}
+local flyEnabled = false
+local speedEnabled = false
+local noclipEnabled = false  -- Neue Variable für NoClip
 local itemEspEnabled = false
 local playerEspEnabled = false
 local aimbotEnabled = false
@@ -328,7 +338,7 @@ local function speed()
     end)
 end
 
--- NoClip Funktion
+-- NoClip Funktion (verbessert)
 local function noclip()
     local Character = LocalPlayer.Character
     if not Character or not Character:FindFirstChild("Humanoid") then return end
@@ -337,13 +347,24 @@ local function noclip()
     
     local connection
     connection = RunService.Stepped:Connect(function()
-        if not speedEnabled then  -- Wir verwenden die gleiche Variable wie für Speed
+        if not noclipEnabled then
+            -- Setze den Normalzustand zurück
+            for _, part in ipairs(Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
             Humanoid:ChangeState("Standing")
             connection:Disconnect()
             return
         end
         
-        Humanoid:ChangeState("StrafingNoPhysics")
+        -- Deaktiviere Collision für alle Teile des Charakters
+        for _, part in ipairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
     end)
 end
 
@@ -603,10 +624,10 @@ SpeedToggle.MouseButton1Click:Connect(function()
 end)
 
 NoClipToggle.MouseButton1Click:Connect(function()
-    speedEnabled = not speedEnabled  -- Wir verwenden die gleiche Variable wie für Speed
-    NoClipToggle.Text = "NoClip: " .. (speedEnabled and "ON" or "OFF")
+    noclipEnabled = not noclipEnabled  -- Verwende die neue Variable
+    NoClipToggle.Text = "NoClip: " .. (noclipEnabled and "ON" or "OFF")
     
-    if speedEnabled then
+    if noclipEnabled then
         noclip()
     end
 end)
