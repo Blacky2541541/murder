@@ -262,15 +262,7 @@ AimbotToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 AimbotToggle.TextSize = 14
 
 -- Variablen
-local flyEnabled = false
-local speedEnabled = false
-local itemEspEnabled = false
-local playerEspEnabled = false
-local aimbotEnabled = false
-local findMurderEnabled = false
-local flySpeed = 1.0
-local murder = nil
-local espObjects = {}
+
 local flyEnabled = false
 local speedEnabled = false
 local noclipEnabled = false  -- Neue Variable für NoClip
